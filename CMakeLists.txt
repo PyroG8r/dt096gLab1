@@ -3,4 +3,4 @@ project(Lab1)
 
 set(CMAKE_CXX_STANDARD 23)
 
-add_executable(Lab1 main.cpp op.h token.h)
+add_executable(Lab1 main.cpp lex.cpp lex.h op.cpp op.h)
