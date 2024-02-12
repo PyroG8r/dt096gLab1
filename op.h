@@ -106,7 +106,7 @@ struct expr_op:op{
     std::optional<std::string> eval(it first, it last) override {
         std::string result;
         for(auto& child : children){
-            auto child_result = child->eval(first, last);
+            auto child_result = child->eval(first++, last);
             if(!child_result){
                 return std::nullopt; // Return std::nullopt as soon as a child fails to evaluate
             }
