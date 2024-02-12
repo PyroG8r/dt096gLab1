@@ -177,8 +177,8 @@ match_op* parse_match(it& first, it last){
 
 
 int main(int argc, char* argv[]) {
-    std::string program = "Wat*erloo"; // argv[1];
-    std::string input = "Wattterloo I was defeated, you won the war Waterloo promise to love you for ever more Waterloo couldn't escape if I wanted to Waterloo knowing my fate is to be with you Waterloo finally facing my Waterloo";
+    std::string program = "W.t.rlo**"; // argv[1];
+    std::string input = "Waterlooo I was defeated, you won the war Waterloo promise to love you for ever more Waterloo couldn't escape if I wanted to Waterloo knowing my fate is to be with you Waterloo finally facing my Waterloo";
     auto first = program.begin();
     auto last = program.end();
     auto tree = parse_match(first, last);
