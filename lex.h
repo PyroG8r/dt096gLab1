@@ -26,6 +26,9 @@ public:
             case ')':
                 type = RPAREN;
                 return *first++;
+            case '+':
+                type = OR;
+                return *first++;
         }
         type = CHAR;
         return *first++;

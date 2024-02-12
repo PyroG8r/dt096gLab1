@@ -7,12 +7,18 @@
 
 #include <vector>
 #include <string>
+#include <optional>
 
 
 using it = std::string::iterator;
 
 struct op{
-    virtual bool eval(it first, it last) = 0;
+
+    std::string matched_string; //
+
+    virtual std::optional<std::string> eval(it first, it last) = 0; //https://en.cppreference.com/w/cpp/utility/optional
+
+
     void add(op* child){
         if(child) {
             children.push_back(child);
@@ -22,68 +28,83 @@ struct op{
 };
 struct ch_op:op{
     char c;
-    ch_op(char c):c(c){}
-    bool eval(it first, it last) override{
-        if(first == last)
-            return false;
-        return *first == c;
+    explicit ch_op(char c):c(c){}
+    std::optional<std::string> eval(it first, it last) override {
+        if(first == last || *first != c)
+            return std::nullopt;
+        return std::string(1, c); // Convert the character to a string and return it
     }
 };
 struct text_op:op{
-    bool eval(it first, it last) override{
+    std::optional<std::string> eval(it first, it last) override {
         auto result = children[0]->eval(first, last);
+        if(!result){
+            return std::nullopt;
+        }
         if(children.size() > 1){  // If the text has more characters to match
-            return result && children[1]->eval(first + 1, last); //Match the next character
+            auto next_result = children[1]->eval(first + 1, last); //Match the next character
+            if(!next_result){
+                return std::nullopt;
+            }
+            return result.value() + next_result.value();
         }
         return result;
     }
 };
+
 struct group_op:op{
-    bool eval(it first, it last) override{
+    std::optional<std::string> eval(it first, it last) override {
+        std::string result;
         // Iterate over all children and evaluate them
         for(auto& child : children){
-            auto result = child->eval(first, last);
-            if(!result){
-                return false; // Return false as soon as a child fails to evaluate
+            auto child_result = child->eval(first, last);
+            if(!child_result){
+                return std::nullopt; // Return std::nullopt as soon as a child fails to evaluate
             }
+            result += child_result.value(); // Concatenate the result of each child
         }
-        return true; // Return true only if all children evaluated successfully
+        return result; // Return the concatenated result
     }
 };
 
 
 struct or_op:op{
-    // Returns true if any of the children returns true
-    bool eval(it first, it last) override{
+    std::optional<std::string> eval(it first, it last) override{
+        // Evaluate the first child
         auto result1 = children[0]->eval(first, last);
         if(result1){
-            return true; // If the first child succeeds, immediately return true
+            return result1; // If the first child succeeds, immediately return the matched string
         }
         // If the first child fails, evaluate the second child
         auto result2 = children[1]->eval(first, last);
-        return result2; // Return the result of the second child
+        return result2; // Return the matched string of the second child or std::nullopt if it fails
     }
 };
 
 struct expr_op:op{
-    bool eval(it first, it last) override{
-        auto result = children[0]->eval(first, last);
-        if(!result){
-            return eval(first + 1, last);
+    std::optional<std::string> eval(it first, it last) override {
+        std::string result;
+        // Iterate over all children and evaluate them
+        for(auto& child : children){
+            auto child_result = child->eval(first, last);
+            if(!child_result){
+                return std::nullopt; // Return std::nullopt as soon as a child fails to evaluate
+            }
+            result += child_result.value(); // Concatenate the result of each child
         }
-        return true;
-
+        return result; // Return the concatenated result
     }
 };
+
 struct match_op:op{
-    bool eval(it first, it last) override{
+    std::optional<std::string> eval(it first, it last) override{
         if(first == last)
-            return false;
+            return std::nullopt;
         auto result = children[0]->eval(first, last);
         if(!result){
             return eval(first + 1, last);
         }
-        return true;
+        return result;
     }
 };
 

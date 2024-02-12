@@ -13,8 +13,9 @@
  *
  * EBNF för språket
  * <program> := <expr>
- * <expr> := <text>[<expr>] | <group>[<expr>] | <or>[<expr>]
+ * <expr> := <text>[<expr>] | <group>[<expr>] | <or>[<expr>] | <many>[<expr>]
  * <or> := <text>+<text>
+ * <many> := <text>*
  * <group> := (<text>)
  * <text> := <char>[<text>]
  * <char> := a-z|A-Z|0-9
@@ -138,13 +139,18 @@ match_op* parse_match(it& first, it last){
 
 
 int main(int argc, char* argv[]) {
-    std::string program = "Waa+erloo"; // argv[1];
+    std::string program = "Waar+Wa"; // argv[1];
     std::string input = "Waterloo I was defeated, you won the war Waterloo promise to love you for ever more Waterloo couldn't escape if I wanted to Waterloo knowing my fate is to be with you Waterloo finally facing my Waterloo";
     auto first = program.begin();
     auto last = program.end();
     auto tree = parse_match(first, last);
     auto match = tree->eval(input.begin(), input.end());
-    std::cout << match;
+
+    if(match.has_value()){
+        std::cout << "Matched string: " << match.value() << std::endl;
+    } else {
+        std::cout << "No match found" << std::endl;
+    }
 
     
 }
