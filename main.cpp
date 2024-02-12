@@ -13,9 +13,10 @@
  *
  * EBNF för språket
  * <program> := <expr>
- * <expr> := <text>[<expr>] | <group>[<expr>] | <or>[<expr>] | <many>[<expr>]
+ * <expr> := <text>[<expr>] | <group>[<expr>] | <or>[<expr>] | <many>[<expr>] | <any>[<expr>]
  * <or> := <text>+<text>
  * <many> := <text>*
+ * <any> := .
  * <group> := (<text>)
  * <text> := <char>[<text>]
  * <char> := a-z|A-Z|0-9
@@ -25,11 +26,12 @@
 ch_op* parse_char(it& first, it last){
     auto ch = lex::check(first, last);
 
-    if(lex::type == lex::END)
+    if(lex::type == lex::END) {
         return nullptr;
-    if(lex::type != lex::CHAR)
-
+    }
+    if(lex::type != lex::CHAR){
         return nullptr;
+    }
 
 
     return new ch_op(ch);
@@ -54,20 +56,23 @@ op* parse_text(it& first, it last){ // Return type is op* to allow for returning
     result->add(ch_node);
     result->add(parse_text(first, last));
 
+    restore = first;
     auto ch = lex::check(first, last);
     if(lex::type == lex::MANY){
         return parse_many(result);
     }
+    first = restore;
     return result;
 }
 //<or> := <text>+<text>
 or_op* parse_or(it& first, it last){
-    auto restore = first; // Add restore point here
+    auto restore = first;
     auto text_node1 = parse_text(first, last);
     if(!text_node1){
         first = restore; // Restore if parsing first text failed
         return nullptr;
     }
+    restore = first;
     auto ch = lex::check(first, last);
     if(lex::type != lex::OR){
         first = restore; // Restore if OR is not found
@@ -108,6 +113,17 @@ group_op* parse_group(it& first, it last){
     return nullptr;
 }
 
+// <any> := .
+any_op* parse_any(it& first, it last){
+    auto restore = first;
+    auto ch = lex::check(first, last);
+    if(lex::type == lex::ANY){
+        return new any_op;
+    }
+    first = restore;
+    return nullptr;
+}
+
 //<expr> := <text>[<expr>] | <group>[<expr>] | <or>[<expr>] | <many>[<expr>]
 expr_op* parse_expr(it& first, it last){
     auto restore = first;
@@ -136,6 +152,16 @@ expr_op* parse_expr(it& first, it last){
         expr_node->add(parse_expr(first, last));
         return expr_node;
     }
+
+    first = restore;
+    auto any_node = parse_any(first, last);
+    if(any_node){
+        auto expr_node = new expr_op;
+        expr_node->add(any_node);
+        expr_node->add(parse_expr(first, last));
+        return expr_node;
+    }
+
     return nullptr;
 }
 
@@ -151,8 +177,8 @@ match_op* parse_match(it& first, it last){
 
 
 int main(int argc, char* argv[]) {
-    std::string program = "Waterlo I"; // argv[1];
-    std::string input = "Waterlo I was defeated, you won the war Waterloo promise to love you for ever more Waterloo couldn't escape if I wanted to Waterloo knowing my fate is to be with you Waterloo finally facing my Waterloo";
+    std::string program = "Wat*erloo"; // argv[1];
+    std::string input = "Wattterloo I was defeated, you won the war Waterloo promise to love you for ever more Waterloo couldn't escape if I wanted to Waterloo knowing my fate is to be with you Waterloo finally facing my Waterloo";
     auto first = program.begin();
     auto last = program.end();
     auto tree = parse_match(first, last);

@@ -11,7 +11,7 @@ using it = std::string::iterator;
 class lex {
 public:
     enum{
-        CHAR, LPAREN, RPAREN, OR, MANY, END
+        CHAR, LPAREN, RPAREN, OR, MANY, ANY, END
     };
     static int type;
     static char check(it& first, it last){
@@ -31,6 +31,9 @@ public:
                 return *first++;
             case '*':
                 type = MANY;
+                return *first++;
+            case '.':
+                type = ANY;
                 return *first++;
         }
         type = CHAR;

@@ -13,11 +13,7 @@
 using it = std::string::iterator;
 
 struct op{
-
-    std::string matched_string; //
-
     virtual std::optional<std::string> eval(it first, it last) = 0; //https://en.cppreference.com/w/cpp/utility/optional
-
 
     void add(op* child){
         if(child) {
@@ -81,6 +77,14 @@ struct many_op:op{
     }
 };
 
+struct any_op:op{
+    std::optional<std::string> eval(it first, it last) override {
+        if(first == last)
+            return std::nullopt;
+        return std::string(1, *first); // Convert the character to a string and return it
+    }
+};
+
 struct group_op:op{
     std::optional<std::string> eval(it first, it last) override {
         std::string result;
@@ -101,7 +105,6 @@ struct group_op:op{
 struct expr_op:op{
     std::optional<std::string> eval(it first, it last) override {
         std::string result;
-        // Iterate over all children and evaluate them
         for(auto& child : children){
             auto child_result = child->eval(first, last);
             if(!child_result){
