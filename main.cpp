@@ -35,8 +35,15 @@ ch_op* parse_char(it& first, it last){
     return new ch_op(ch);
 }
 
+// <many> := <text>*
+many_op* parse_many(text_op* text_node){
+    auto many_node = new many_op;
+    many_node->add(text_node);
+    return many_node;
+}
+
 // <text> := <char>[<text>]
-text_op* parse_text(it& first, it last){
+op* parse_text(it& first, it last){ // Return type is op* to allow for returning text_op* and many_op*
     auto restore = first;
     auto ch_node = parse_char(first, last);
     if(!ch_node){
@@ -46,6 +53,11 @@ text_op* parse_text(it& first, it last){
     auto result = new text_op;
     result->add(ch_node);
     result->add(parse_text(first, last));
+
+    auto ch = lex::check(first, last);
+    if(lex::type == lex::MANY){
+        return parse_many(result);
+    }
     return result;
 }
 //<or> := <text>+<text>
@@ -96,7 +108,7 @@ group_op* parse_group(it& first, it last){
     return nullptr;
 }
 
-//<expr> := <text>[<expr>] | <group>[<expr>] | <or>[<expr>]
+//<expr> := <text>[<expr>] | <group>[<expr>] | <or>[<expr>] | <many>[<expr>]
 expr_op* parse_expr(it& first, it last){
     auto restore = first;
     auto group_op = parse_group(first, last);
@@ -139,8 +151,8 @@ match_op* parse_match(it& first, it last){
 
 
 int main(int argc, char* argv[]) {
-    std::string program = "Waar+Wa"; // argv[1];
-    std::string input = "Waterloo I was defeated, you won the war Waterloo promise to love you for ever more Waterloo couldn't escape if I wanted to Waterloo knowing my fate is to be with you Waterloo finally facing my Waterloo";
+    std::string program = "Waterlo I"; // argv[1];
+    std::string input = "Waterlo I was defeated, you won the war Waterloo promise to love you for ever more Waterloo couldn't escape if I wanted to Waterloo knowing my fate is to be with you Waterloo finally facing my Waterloo";
     auto first = program.begin();
     auto last = program.end();
     auto tree = parse_match(first, last);

@@ -52,6 +52,35 @@ struct text_op:op{
     }
 };
 
+struct or_op:op{
+    std::optional<std::string> eval(it first, it last) override{
+        // Evaluate the first child
+        auto result1 = children[0]->eval(first, last);
+        if(result1){
+            return result1; // If the first child succeeds, immediately return the matched string
+        }
+        // If the first child fails, evaluate the second child
+        auto result2 = children[1]->eval(first, last);
+        return result2; // Return the matched string of the second child or std::nullopt if it fails
+    }
+};
+
+struct many_op:op{
+    std::optional<std::string> eval(it first, it last) override{
+        std::string result;
+        auto current = first; // Create a copy of the iterator
+        while(current != last){ // Iterate over the input string
+            auto child_result = children[0]->eval(current, last);
+            if(!child_result){ // If the child fails to match, break the loop
+                break;
+            }
+            result += child_result.value(); // Concatenate the matched string
+            current++;
+        }
+        return result;
+    }
+};
+
 struct group_op:op{
     std::optional<std::string> eval(it first, it last) override {
         std::string result;
@@ -68,18 +97,6 @@ struct group_op:op{
 };
 
 
-struct or_op:op{
-    std::optional<std::string> eval(it first, it last) override{
-        // Evaluate the first child
-        auto result1 = children[0]->eval(first, last);
-        if(result1){
-            return result1; // If the first child succeeds, immediately return the matched string
-        }
-        // If the first child fails, evaluate the second child
-        auto result2 = children[1]->eval(first, last);
-        return result2; // Return the matched string of the second child or std::nullopt if it fails
-    }
-};
 
 struct expr_op:op{
     std::optional<std::string> eval(it first, it last) override {
