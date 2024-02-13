@@ -14,14 +14,15 @@
  * EBNF för språket
  * <program> := <expr>
  * <expr> := <text>[<expr>] | <group>[<expr>] | <or>[<expr>] | <many>[<expr>] | <any>[<expr>]
- * <or> := <text>+<text>
- * <many> := <text>*
+ * <or> := <expr>+<expr>
+ * <many> := <expr>*
  * <any> := .
  * <group> := (<text>)
  * <text> := <char>[<text>]
  * <char> := a-z|A-Z|0-9
  *
  */
+op* parse_many(it& first, it last, op* expr_node);
 
 ch_op* parse_char(it& first, it last){
     auto ch = lex::check(first, last);
@@ -37,15 +38,9 @@ ch_op* parse_char(it& first, it last){
     return new ch_op(ch);
 }
 
-// <many> := <text>*
-many_op* parse_many(text_op* text_node){
-    auto many_node = new many_op;
-    many_node->add(text_node);
-    return many_node;
-}
 
 // <text> := <char>[<text>]
-op* parse_text(it& first, it last){ // Return type is op* to allow for returning text_op* and many_op*
+op* parse_text(it& first, it last){
     auto restore = first;
     auto ch_node = parse_char(first, last);
     if(!ch_node){
@@ -53,15 +48,16 @@ op* parse_text(it& first, it last){ // Return type is op* to allow for returning
         return nullptr;
     }
     auto result = new text_op;
-    result->add(ch_node);
-    result->add(parse_text(first, last));
-
     restore = first;
     auto ch = lex::check(first, last);
     if(lex::type == lex::MANY){
-        return parse_many(result);
+        first = restore;
+        result->add(parse_many(first, last, ch_node));
+    } else {
+        first = restore;
+        result->add(ch_node);
+        result->add(parse_text(first, last));
     }
-    first = restore;
     return result;
 }
 //<or> := <text>+<text>
@@ -113,6 +109,19 @@ group_op* parse_group(it& first, it last){
     return nullptr;
 }
 
+// <many> := <expr>*
+op* parse_many(it& first, it last, op* expr_node){ // Return type is op* to allow for returning many_op* and expr_op*
+    auto restore = first;
+    auto ch = lex::check(first, last);
+    if(lex::type == lex::MANY){
+        auto many_node = new many_op;
+        many_node->add(expr_node);
+        return many_node;
+    }
+    first = restore;
+    return expr_node;
+}
+
 // <any> := .
 any_op* parse_any(it& first, it last){
     auto restore = first;
@@ -124,13 +133,13 @@ any_op* parse_any(it& first, it last){
     return nullptr;
 }
 
-//<expr> := <text>[<expr>] | <group>[<expr>] | <or>[<expr>] | <many>[<expr>]
+//<expr> := <text>[<expr>] | <group>[<expr>] | <or>[<expr>] | <any>[<expr>]
 expr_op* parse_expr(it& first, it last){
     auto restore = first;
     auto group_op = parse_group(first, last);
     if(group_op){
         auto expr_node = new expr_op;
-        expr_node->add(group_op);
+        expr_node->add(parse_many(first, last, group_op));
         expr_node->add(parse_expr(first, last));
         return expr_node;
     }
@@ -139,7 +148,7 @@ expr_op* parse_expr(it& first, it last){
     auto or_op = parse_or(first, last);
     if(or_op){
         auto expr_node = new expr_op;
-        expr_node->add(or_op);
+        expr_node->add(parse_many(first, last,or_op));
         expr_node->add(parse_expr(first, last));
         return expr_node;
     }
@@ -157,7 +166,7 @@ expr_op* parse_expr(it& first, it last){
     auto any_node = parse_any(first, last);
     if(any_node){
         auto expr_node = new expr_op;
-        expr_node->add(any_node);
+        expr_node->add(parse_many(first, last,any_node));
         expr_node->add(parse_expr(first, last));
         return expr_node;
     }
@@ -177,7 +186,7 @@ match_op* parse_match(it& first, it last){
 
 
 int main(int argc, char* argv[]) {
-    std::string program = "W.t.rlo**"; // argv[1];
+    std::string program = "lo* I"; // argv[1];
     std::string input = "Waterlooo I was defeated, you won the war Waterloo promise to love you for ever more Waterloo couldn't escape if I wanted to Waterloo knowing my fate is to be with you Waterloo finally facing my Waterloo";
     auto first = program.begin();
     auto last = program.end();
