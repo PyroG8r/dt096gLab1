@@ -70,10 +70,28 @@ struct many_op:op{
         std::string result;
         while(first != last){ // Iterate over the input string
             auto child_result = children[0]->eval(first, last, consumed);
-            if(!child_result.has_value()){ // If the child fails to match, break the loop
+            if(!child_result){ // If the child fails to match, break the loop
                 break;
             }
             result += child_result.value(); // Concatenate the matched string
+            first ++;
+        }
+        consumed = result.size();
+        return result;
+    }
+};
+
+struct count_op:op{
+    int count;
+    std::optional<std::string> eval(it first, it last, int& consumed) override {
+        std::string result;
+        consumed = 0;
+        for(int i = 0; i < count; ++i) {
+            auto child_result = children[0]->eval(first, last, consumed);
+            if(!child_result) {
+                return std::nullopt;
+            }
+            result += child_result.value();
             first ++;
         }
         consumed = result.size();

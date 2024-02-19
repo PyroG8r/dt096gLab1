@@ -31,6 +31,7 @@ ch_op* parse_char(it& first, it last);
 expr_op* parse_expr(it& first, it last);
 match_op* parse_match(it& first, it last);
 any_op* parse_any(it& first, it last);
+op* parse_count(it& first, it last, op* expr_node);
 
 ch_op* parse_char(it& first, it last){
     auto ch = lex::check(first, last);
@@ -61,7 +62,13 @@ op* parse_text(it& first, it last){
     if(lex::type == lex::MANY){
         first = restore;
         result->add(parse_many(first, last, ch_node));
-    } else {
+    }
+    else if(lex::type == lex::LCOUNT){
+        first = restore;
+        result->add(parse_count(first, last, ch_node));
+    }
+
+    else {
         first = restore;
         result->add(ch_node);
         result->add(parse_text(first, last));
@@ -130,6 +137,34 @@ op* parse_many(it& first, it last, op* expr_node){ // Return type is op* to allo
     return expr_node;
 }
 
+// <counter> := <expr>{<number>}
+op* parse_count(it& first, it last, op* expr_node){
+    auto restore = first;
+    auto ch = lex::check(first, last);
+    if(lex::type != lex::LCOUNT){
+        first = restore;
+        return expr_node;
+    }
+    int count = 0;
+    while(first != last && std::isdigit(*first)) {
+        count = count * 10 + (*first - '0');
+        ++first;
+    }
+    if(count == 0){
+        first = restore;
+        return expr_node;
+    }
+    ch = lex::check(first, last);
+    if(lex::type != lex::RCOUNT){
+        first = restore;
+        return expr_node;
+    }
+    auto count_node = new count_op;
+    count_node->count = count;
+    count_node->add(expr_node);
+    return count_node;
+}
+
 // <any> := .
 any_op* parse_any(it& first, it last){
     auto restore = first;
@@ -147,7 +182,7 @@ expr_op* parse_expr(it& first, it last){
     auto group_op = parse_group(first, last);
     if(group_op){
         auto expr_node = new expr_op;
-        expr_node->add(parse_many(first, last, group_op));
+        expr_node->add(parse_many(first, last, parse_count(first, last, group_op)));
         expr_node->add(parse_expr(first, last));
         return expr_node;
     }
@@ -156,7 +191,7 @@ expr_op* parse_expr(it& first, it last){
     auto or_op = parse_or(first, last);
     if(or_op){
         auto expr_node = new expr_op;
-        expr_node->add(parse_many(first, last,or_op));
+        expr_node->add(parse_many(first, last, parse_count(first, last, or_op)));
         expr_node->add(parse_expr(first, last));
         return expr_node;
     }
@@ -174,7 +209,8 @@ expr_op* parse_expr(it& first, it last){
     auto any_node = parse_any(first, last);
     if(any_node){
         auto expr_node = new expr_op;
-        expr_node->add(parse_many(first, last,any_node));
+        expr_node->add(parse_many(first, last,parse_count(first, last, any_node)));
+
         expr_node->add(parse_expr(first, last));
         return expr_node;
     }
@@ -194,7 +230,7 @@ match_op* parse_match(it& first, it last){
 
 
 int main(int argc, char* argv[]) {
-    std::string program = "W.{3}"; // argv[1];
+    std::string program = "Waterloo (.*)the war"; // argv[1];
     std::string input = "Waterlooo I was defeated, you won the war Waterloo promise to love you for ever more Waterloo couldn't escape if I wanted to Waterloo knowing my fate is to be with you Waterloo finally facing my Waterloo";
     int consumed = 0;
 
