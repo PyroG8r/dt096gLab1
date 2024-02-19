@@ -13,16 +13,24 @@
  *
  * EBNF för språket
  * <program> := <expr>
- * <expr> := <text>[<expr>] | <group>[<expr>] | <or>[<expr>] | <many>[<expr>] | <any>[<expr>]
+ * <expr> := <text>[<expr>] | <group>[<expr>] | <or>[<expr>] | <many>[<expr>] | <any>[<expr>] | <counter>[<expr>]
+ * <group> := (<expr>)
  * <or> := <expr>+<expr>
  * <many> := <expr>*
  * <any> := .
- * <group> := (<text>)
+ * <counter> := <expr>{<number>}
  * <text> := <char>[<text>]
  * <char> := a-z|A-Z|0-9
  *
  */
 op* parse_many(it& first, it last, op* expr_node);
+op* parse_text(it& first, it last);
+or_op* parse_or(it& first, it last);
+group_op* parse_group(it& first, it last);
+ch_op* parse_char(it& first, it last);
+expr_op* parse_expr(it& first, it last);
+match_op* parse_match(it& first, it last);
+any_op* parse_any(it& first, it last);
 
 ch_op* parse_char(it& first, it last){
     auto ch = lex::check(first, last);
@@ -85,14 +93,14 @@ or_op* parse_or(it& first, it last){
     return or_node;
 }
 
-// <group> : (<text>)
+// <group> := (<expr>)
 group_op* parse_group(it& first, it last){
     auto restore = first; // Add restore point here
     auto ch = lex::check(first, last);
     if(lex::type == lex::LPAREN){
-        auto text_node = parse_text(first, last);
-        if(!text_node) {
-            first = restore; // Restore if parsing text failed
+        auto expr_node = parse_expr(first, last);
+        if(!expr_node) {
+            first = restore; // Restore if parsing expr failed
             return nullptr;
         }
         lex::check(first, last);
@@ -102,7 +110,7 @@ group_op* parse_group(it& first, it last){
         }
         // Parse of group was successful, create group node
         auto group_node = new group_op;
-        group_node->add(text_node);
+        group_node->add(expr_node);
         return group_node;
     }
     first = restore; // Restore if opening parenthesis is not found
@@ -186,15 +194,18 @@ match_op* parse_match(it& first, it last){
 
 
 int main(int argc, char* argv[]) {
-    std::string program = "lo* I"; // argv[1];
+    std::string program = "W.{3}"; // argv[1];
     std::string input = "Waterlooo I was defeated, you won the war Waterloo promise to love you for ever more Waterloo couldn't escape if I wanted to Waterloo knowing my fate is to be with you Waterloo finally facing my Waterloo";
+    int consumed = 0;
+
     auto first = program.begin();
     auto last = program.end();
     auto tree = parse_match(first, last);
-    auto match = tree->eval(input.begin(), input.end());
+    auto match = tree->eval(input.begin(), input.end(), consumed);
 
     if(match.has_value()){
         std::cout << "Matched string: " << match.value() << std::endl;
+        std::cout << "Consumed: " << consumed << std::endl;
     } else {
         std::cout << "No match found" << std::endl;
     }
