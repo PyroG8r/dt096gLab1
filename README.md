@@ -1,7 +1,7 @@
 **Parser baserad på grammatik som matchar given text med hjälp av ett program**
 
 EBNF för språket
-  <program> := <expr>
+  \<program> := \<expr>
   <expr> := <text>[<expr>] | <group>[<expr>] | <or>[<expr>] | <many>[<expr>] | <any>[<expr>] | <counter>[<expr>]
   <group> := (<expr>)
   <or> := <expr>+<expr>
